@@ -1,6 +1,5 @@
 ---
 import Breadcrumbs from '@/components/Breadcrumbs.astro'
-import Link from '@/components/Link.astro'
 import PageHead from '@/components/PageHead.astro'
 import ProjectCard from '@/components/ProjectCard.astro'
 import Layout from '@/layouts/Layout.astro'
@@ -16,29 +15,25 @@ const projects = await getAllProjects()
   <section>
     <div class="min-w-full">
       <div class="prose mb-8">
-        <p class="mt-0">
-          astro-erudite is an opinionated, unstyled static blogging template
-          that prioritizes simplicity and performance, built with <Link
-            href="https://astro.build"
-            external
-            underline>Astro</Link
-          >, <Link href="https://tailwindcss.com" external underline
-            >Tailwind</Link
-          >, and <Link href="https://ui.shadcn.com" external underline
-            >shadcn/ui</Link
-          >. It provides a clean foundation for your content while being
-          extremely easy to customize.
+        <p class="mt-0">What's up!</p>
+        <p>
+          I'm an <strong>AI Engineer</strong> with a solid 5-year track record in
+          the <strong>Natural Language Processing</strong> space. Instead of just
+          pushing lines of code, I'm all about bridging AI and real-world impact
+          to craft user experiences that actually hit different.
         </p>
         <p>
-          To learn more about the philosophy behind this template, check out the
-          following blog post: <Link
-            href="/blog/the-state-of-static-blogs"
-            underline>The State of Static Blogs in 2024</Link
-          >.
+          When I'm not in deep work mode, you'll catch me diving into Science
+          papers, exploring new tech stacks, and hunting down best practices to
+          level up my engineering game every single day.
+        </p>
+        <p>
+          Just out here trying to stay ahead of the curve and become the best
+          version of an engineer possible. No gatekeeping, just pure growth.
         </p>
       </div>
 
-      <h2 class="mb-4 text-2xl font-medium">Example Projects Listing</h2>
+      <h2 class="mb-4 text-2xl font-medium">Featured Projects</h2>
       <div class="flex flex-col gap-4">
         {projects.map((project) => <ProjectCard project={project} />)}
       </div>
