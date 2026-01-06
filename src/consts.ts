@@ -4,7 +4,7 @@ export const SITE: Site = {
   title: 'honoré blog',
   description:
     'honoré blog is a personal blog for sharing my thoughts and experiences.',
-  href: 'https://honoréblog.vercel.app',
+  href: 'https://hieunguyen1053.github.io',
   author: 'honoré',
   locale: 'vi-VN',
   featuredPostCount: 2,
