@@ -1,5 +1,5 @@
 ---
-title: 'Theo dõi danh mục đầu tư VCBF với AI qua MCP'
+title: 'Theo dõi danh mục đầu tư với AI qua MCP'
 description: 'Tự động hóa việc theo dõi giá chứng chỉ quỹ VCBF bằng cách xây dựng MCP Server và tích hợp vào Claude hay Antigravity.'
 date: 2026-01-14
 tags: ['mcp', 'claude', 'antigravity', 'vcbf', 'automation', 'typescript']
@@ -30,22 +30,19 @@ Kèo này mình sẽ viết một cái MCP Server đơn giản để:
 
 Đầu tiên là phải lấy được data cái đã. Mình soi source trang VCBF thì thấy họ render biểu đồ bằng một cục JSON nằm tơ hơ ngay trong thẻ `<script>`, chứ không gọi API riêng (tiếc ghê). Nhưng không sao, dev mà, không có API thì mình scrape.
 
-Mình dùng `axios` để kéo source HTML về, rồi dùng `cheerio` để bóc tách cái cục JSON đó ra. Code nó "cục súc" kiểu này đây:
+Mình dùng `axios` để kéo source HTML về, rồi dùng `cheerio` để bóc tách cái cục JSON đó ra. Code nó hơi "cục súc" kiểu này đây:
 
 ```typescript
 // src/vcbf.ts
 export async function fetchFundData(symbol: string): Promise<FundData[]> {
   const url = FUND_URLS[symbol];
-  const response = await axios.get(url); // Kéo HTML về
-  const $ = cheerio.load(response.data); // Load vào Cheerio để parse
+  const response = await axios.get(url);
+  const $ = cheerio.load(response.data);
   let jsonData: FundData[] | null = null;
 
-  // Lục lọi các thẻ script để tìm kho báu
   $('script').each((i, el) => {
     const scriptContent = $(el).html();
-    // Dấu hiệu nhận biết data nằm ở đây
     if (scriptContent?.includes('var json_parse = JSON.parse')) {
-        // Dùng chút ma thuật Regex để gắp chuỗi JSON ra
         const match = scriptContent.match(/var json_parse = JSON\.parse\('([^']+)'\);/);
         if (match && match[1]) {
             jsonData = JSON.parse(match[1]);
@@ -71,16 +68,13 @@ const cache = new NodeCache({ stdTTL: 1800 });
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { symbol, period } = request.params.arguments;
     
-    // Kiểm tra trong túi xem có hàng chưa
     let data = cache.get(symbol);
     if (!data) {
-        // Chưa có thì mới đi lấy
         data = await fetchFundData(symbol);
         cache.set(symbol, data);
     }
-    
-    // Đoạn này là logic lọc thời gian (1D, 1Y...) để Claude đỡ bị ngợp data
-    // ...
+
+    ...
     
     return { content: [{ type: 'text', text: JSON.stringify(filteredData) }] };
 });
@@ -88,7 +82,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 Mình cũng làm thêm cái tham số `period` (kiểu `1Y`, `MAX`...) để lúc nào cần xem trend dài hạn thì kéo hết, còn bình thường chắc xem giá hôm nay là đủ rồi.
 
-Cấu hình xong xuôi vào app Claude Desktop, giờ chat sướng hẳn:
+Cấu hình xong xuôi vào app Antigravity, chỉ cần thêm là có thể chạy được luôn, nó sẽ tự cài hoặc update package nếu cần:
+
+```json
+{
+  "mcpServers": {
+    "vcbf": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "vcbf-mcp"
+      ]
+    }
+  }
+}
+```
 
 ![Demo](./demo.png)
 
