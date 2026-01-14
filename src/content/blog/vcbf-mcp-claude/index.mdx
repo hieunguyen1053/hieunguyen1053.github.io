@@ -2,20 +2,15 @@
 title: 'Theo dõi danh mục đầu tư VCBF với AI qua MCP'
 description: 'Tự động hóa việc theo dõi giá chứng chỉ quỹ VCBF bằng cách xây dựng MCP Server và tích hợp vào Claude hay Antigravity.'
 date: 2026-01-14
-tags: ['mcp', 'claude', 'vcbf', 'automation', 'typescript']
-# image: './banner.png'
+tags: ['mcp', 'claude', 'antigravity', 'vcbf', 'automation', 'typescript']
+image: './banner.png'
 authors: ['honoré']
 draft: false
 ---
 
 import Callout from '@/components/Callout.astro'
 
-Chuyện là mình có đầu tư, mỗi chỗ rót một ít, gần đây thì mấy quỹ mở của VCBF tăng lời như đầu tư vàng. Vấn đề là mình bị cái "tật" hay tò mò, cứ thích vào xem giá chứng chỉ quỹ (NAV/1CCQ) nó nhảy nhót thế nào. Dù mình mua đều, mỗi tháng đều mua, nhưng phải lựa ngày mà giá nó tối ưu nhất để mua cho nó stonk. Mà khổ nỗi, mỗi lần muốn check là lại phải:
-
-1. Mở tab mới.
-2. Google mò vào trang VCBF.
-3. Ngồi chờ web load (nhiều lúc mạng mẽo chán không tả được).
-4. Nheo mắt soi cái biểu đồ hoặc bảng giá để tìm ngày mới nhất.
+Chuyện là mình có đầu tư, mỗi chỗ rót một ít, gần đây thì mấy quỹ mở của VCBF tăng lời như đầu tư vàng. Vấn đề là mình bị cái "tật" hay tò mò, cứ thích vào xem giá chứng chỉ quỹ (NAV/1CCQ) nó nhảy nhót thế nào. Dù mình mua đều, mỗi tháng đều mua, nhưng phải lựa ngày mà giá nó tối ưu nhất để mua cho nó stonk.
 
 Làm thủ công vài lần thì vui, chứ ngày nào cũng lặp lại thì đúng là cực hình với một thằng dev như mình. Tại sao phải chạy bằng "cơm" trong khi mình có thể code ra tool để nó phục vụ mình?
 
@@ -93,12 +88,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 Mình cũng làm thêm cái tham số `period` (kiểu `1Y`, `MAX`...) để lúc nào cần xem trend dài hạn thì kéo hết, còn bình thường chắc xem giá hôm nay là đủ rồi.
 
-## Kết quả: Phê chữ ê kéo dài!
-
 Cấu hình xong xuôi vào app Claude Desktop, giờ chat sướng hẳn:
 
-**Mình:** "Giá VCBF-MGF hôm nay thế nào so với tuần trước em?"
-**Claude:** *(Âm thầm chạy tool...)* "Dạ anh, dữ liệu ngày 12/01/2026 thì giá VCBF-MGF đang là 10,000 VND. So với tuần trước thì..."
+![Demo](./demo.png)
 
 Đấy, sướng! Không phải Alt-Tab, không phải chờ load, thông tin dâng tận miệng.
 
