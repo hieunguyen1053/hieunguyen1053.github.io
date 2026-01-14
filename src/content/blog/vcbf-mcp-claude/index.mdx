@@ -1,0 +1,105 @@
+---
+title: 'Theo dõi danh mục đầu tư VCBF với AI qua MCP'
+description: 'Tự động hóa việc theo dõi giá chứng chỉ quỹ VCBF bằng cách xây dựng MCP Server và tích hợp vào Claude hay Antigravity.'
+date: 2026-01-14
+tags: ['mcp', 'claude', 'vcbf', 'automation', 'typescript']
+# image: './banner.png'
+authors: ['honoré']
+draft: false
+---
+
+import Callout from '@/components/Callout.astro'
+
+Chuyện là mình có đầu tư, mỗi chỗ rót một ít, gần đây thì mấy quỹ mở của VCBF tăng lời như đầu tư vàng. Vấn đề là mình bị cái "tật" hay tò mò, cứ thích vào xem giá chứng chỉ quỹ (NAV/1CCQ) nó nhảy nhót thế nào. Dù mình mua đều, mỗi tháng đều mua, nhưng phải lựa ngày mà giá nó tối ưu nhất để mua cho nó stonk. Mà khổ nỗi, mỗi lần muốn check là lại phải:
+
+1. Mở tab mới.
+2. Google mò vào trang VCBF.
+3. Ngồi chờ web load (nhiều lúc mạng mẽo chán không tả được).
+4. Nheo mắt soi cái biểu đồ hoặc bảng giá để tìm ngày mới nhất.
+
+Làm thủ công vài lần thì vui, chứ ngày nào cũng lặp lại thì đúng là cực hình với một thằng dev như mình. Tại sao phải chạy bằng "cơm" trong khi mình có thể code ra tool để nó phục vụ mình?
+
+Thế là mình nghĩ: **Ước gì chat với Claude hay Antigravity mà hỏi được luôn "MGF hôm nay nhiêu rồi?" thì ngon biết mấy.**
+
+Và tin vui là làm được thật! Chìa khóa ở đây là **Model Context Protocol (MCP)**.
+
+## MCP là cái gì?
+
+Nói nôm na dễ hiểu thì MCP giống như cái cổng USB cho mấy con AI vậy. Bình thường bọn AI nó chỉ biết những gì nó được học, hoặc những gì bạn paste vào khung chat. Nhưng với MCP, bạn có thể tạo ra một cái "cáp nối", cắm dữ liệu từ bên ngoài (như database, file local, hay website) trực tiếp vào cho xài.
+
+Kèo này mình sẽ viết một cái MCP Server đơn giản để:
+1. "Mò" vào trang web VCBF lấy dữ liệu giá giùm mình.
+2. Tạo ra cái tool tên là `get_fund_pricing`, bọn AI chỉ cần gọi là được.
+
+## Bước 1: Đi "đào" dữ liệu (Scraping)
+
+Đầu tiên là phải lấy được data cái đã. Mình soi source trang VCBF thì thấy họ render biểu đồ bằng một cục JSON nằm tơ hơ ngay trong thẻ `<script>`, chứ không gọi API riêng (tiếc ghê). Nhưng không sao, dev mà, không có API thì mình scrape.
+
+Mình dùng `axios` để kéo source HTML về, rồi dùng `cheerio` để bóc tách cái cục JSON đó ra. Code nó "cục súc" kiểu này đây:
+
+```typescript
+// src/vcbf.ts
+export async function fetchFundData(symbol: string): Promise<FundData[]> {
+  const url = FUND_URLS[symbol];
+  const response = await axios.get(url); // Kéo HTML về
+  const $ = cheerio.load(response.data); // Load vào Cheerio để parse
+  let jsonData: FundData[] | null = null;
+
+  // Lục lọi các thẻ script để tìm kho báu
+  $('script').each((i, el) => {
+    const scriptContent = $(el).html();
+    // Dấu hiệu nhận biết data nằm ở đây
+    if (scriptContent?.includes('var json_parse = JSON.parse')) {
+        // Dùng chút ma thuật Regex để gắp chuỗi JSON ra
+        const match = scriptContent.match(/var json_parse = JSON\.parse\('([^']+)'\);/);
+        if (match && match[1]) {
+            jsonData = JSON.parse(match[1]);
+        }
+    }
+  });
+
+  return jsonData;
+}
+```
+
+## Bước 2: Dựng server với MCP
+
+Có data rồi, giờ dựng server để MCP client gọi. Mình dùng luôn cái SDK `@modelcontextprotocol/sdk` cho chính chủ.
+
+À có một cái trick nhỏ: Giá quỹ này cả ngày mới update một lần, dạo gần đây thì VCBF mới thực hiện giao dịch nhiều hơn nên cập nhật dữ liệu thường xuyên hơn. Nên mình gắn thêm cái **Cache 30 phút** vào. Chứ mỗi lần chat mà lại đi request trang VCBF thì vừa chậm, vừa spam server người ta, khéo lại bị chặn IP thì toang.
+
+```typescript
+// src/index.ts
+// Cache 30 phút cho đời thanh thản
+const cache = new NodeCache({ stdTTL: 1800 });
+
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { symbol, period } = request.params.arguments;
+    
+    // Kiểm tra trong túi xem có hàng chưa
+    let data = cache.get(symbol);
+    if (!data) {
+        // Chưa có thì mới đi lấy
+        data = await fetchFundData(symbol);
+        cache.set(symbol, data);
+    }
+    
+    // Đoạn này là logic lọc thời gian (1D, 1Y...) để Claude đỡ bị ngợp data
+    // ...
+    
+    return { content: [{ type: 'text', text: JSON.stringify(filteredData) }] };
+});
+```
+
+Mình cũng làm thêm cái tham số `period` (kiểu `1Y`, `MAX`...) để lúc nào cần xem trend dài hạn thì kéo hết, còn bình thường chắc xem giá hôm nay là đủ rồi.
+
+## Kết quả: Phê chữ ê kéo dài!
+
+Cấu hình xong xuôi vào app Claude Desktop, giờ chat sướng hẳn:
+
+**Mình:** "Giá VCBF-MGF hôm nay thế nào so với tuần trước em?"
+**Claude:** *(Âm thầm chạy tool...)* "Dạ anh, dữ liệu ngày 12/01/2026 thì giá VCBF-MGF đang là 10,000 VND. So với tuần trước thì..."
+
+Đấy, sướng! Không phải Alt-Tab, không phải chờ load, thông tin dâng tận miệng.
+
+Tự động hóa từ những cái nhỏ nhỏ này công nhận vui thật. Chúc anh em code vui và đầu tư lãi to nhé!
