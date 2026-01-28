@@ -1,0 +1,84 @@
+---
+title: "Cách mình 'sống sót' khi dùng 3 cái máy Mac: Đồng bộ mọi thứ với Mackup"
+description: 'Chia sẻ về việc sử dụng Mackup để đồng bộ dotfiles, skills và MCP config trên nhiều máy Mac'
+date: 2026-01-28
+tags: ['mackup', 'dotfiles', 'macos', 'productivity', 'mcp']
+image: './banner.png'
+authors: ['honoré']
+draft: false
+---
+
+import Callout from '@/components/Callout.astro'
+
+Dùng nhiều máy Mac cùng lúc sướng thì sướng thật, nhưng nó cũng đi kèm một cái "cực" khó chịu: đồng bộ config. 
+
+Mình đang dùng 3 máy: một chiếc Macbook Air để mang đi làm hằng ngày, Mac Studio đặt cố định ở nhà để làm việc nặng, và một chiếc Mac Mini đóng vai trò làm server local. Cái kịch bản mà mình hay gặp đó là sáng ở công ty được đối tác cấp cho cái key passphrase để SSH vào HPC mới, mình lưu vào con Air, tối về nhà định dùng Studio để code tiếp thì... chịu chết vì không có key đó. Hay như việc mình cực kỳ hay quên command nên phải đào bới `history` liên tục, mà máy này thì không thấy lịch sử gõ của máy kia.
+
+Nó làm mình bị mất nhịp. Cảm giác cứ phải nhớ để sync thủ công hay copy-paste file config qua lại nó đúng là một cái cực hình. Cho đến khi mình tìm thấy Mackup.
+
+Thực ra Mackup nó đơn giản đến mức không ngờ. Nó là một cái tool command-line nhỏ gọn, làm đúng một việc: gom đống config files của bạn vào một folder sync (Dropbox, iCloud, hoặc như mình là một cái Git repo), sau đó nó tạo symlink từ chỗ cũ trỏ về folder đó. Khi sang máy mới, bạn chỉ cần chạy lệnh `mackup restore` là xong. Không có logic gì quá cao siêu, nhưng chính vì nó đơn giản nên nó cực kỳ ổn định.
+
+Hồi sinh viên mình cũng bày đặt sync config bằng Git thủ công, nhưng sau này máy móc nhiều lên, config phức tạp hơn thì cách đó không còn tải nổi nữa. Với Mackup, mình sync từ những thứ cơ bản như **Zsh, Oh-my-zsh** (với bộ theme P10K màu mè) cho đến config **Neovim**.
+
+Cài đặt thì cực nhanh bằng Homebrew:
+```bash
+brew install mackup
+```
+Lần đầu chạy thì cứ `mackup backup` để nó "dọn nhà" cho config của bạn. Sang máy khác thì `mackup restore`. 
+
+Dạo gần đây mình bắt đầu lấn sân sang "Vibe coding", dùng Claude Code, Gemini-CLI, Antigravity nên phải động đến MCP (Model Context Protocol) rất nhiều. Mình sưu tầm và tự viết khá nhiều "skills" cho AI, và mình quyết định sync luôn cả đống "não bộ" đó.
+
+Đây là file `.mackup.cfg` hiện tại của mình:
+
+```ini title="~/.mackup.cfg"
+[storage]
+engine = file_system
+path = dotfiles
+directory = mackup
+
+[applications_to_sync]
+mackup
+oh-my-zsh
+p10k
+zsh
+claude
+gemini
+zed
+```
+
+Ví dụ để sync được đống skills hay MCP của Gemini CLI, mình phải tự chế một cái custom config cho Mackup. Bạn có thể tạo file `.cfg` trong folder `~/.mackup/` là nó hiểu ngay.
+
+<Callout title="Config cho Gemini và Zed" variant="tip" defaultOpen={true}>
+Đây là cách mình "dạy" cho Mackup biết chỗ nào cần sync cho Gemini và Zed:
+
+```ini title="~/.mackup/gemini.cfg"
+[application]
+name = gemini
+
+[configuration_files]
+.gemini/antigravity/mcp_config.json 
+.gemini/antigravity/skills
+.gemini/settings.json
+.gemini/skills
+.gemini/extensions
+```
+
+Và cho Zed (IDE chính của mình)::
+
+```ini title="~/.mackup/zed.cfg"
+[application]
+name = zed
+
+[configuration_files]
+.config/zed/settings.json
+.config/zed/themes
+```
+</Callout>
+
+Nhưng có một thứ mình phải nhấn mạnh, đó là vấn đề an toàn. **Nếu bạn dùng Git để sync như mình, hãy để repo ở chế độ Private.** Trong config files có đủ thứ nhạy cảm: API keys, tokens, lịch sử gõ lệnh, SSH keys... Đừng bao giờ nghĩ "mình có gì đâu mà sợ". Cứ để private cho chắc. Kể cả khi đã để private, mình vẫn dùng `.gitignore` để chặn mấy file quá riêng tư như SSH private keys hay file chứa token login của GitHub CLI (`.config/gh/hosts.yml`).
+
+Cái hay nhất khi dùng combo Mackup + Git là cảm giác không còn ranh giới giữa các máy nữa. Mọi thứ giống như một hệ điều hành duy nhất được "phân thân" ra vậy. 
+
+Tóm lại, nếu bạn đang sở hữu từ 2 máy Mac trở lên và thấy mệt mỏi với việc đồng bộ hay đơn giản là chỉ cần backup lại, hãy thử Mackup. Nó giải quyết đúng cái nỗi đau của những người thích vọc vạch config như chúng mình. Chỉ cần nhớ: **Để repo private**, vậy thôi.
+
+Nếu muốn tìm hiểu sâu hơn, bạn có thể check [Repo của Mackup](https://github.com/lra/mackup) hoặc xem [danh sách các app](https://github.com/lra/mackup/tree/master/mackup/applications) mà nó hỗ trợ sẵn nhé.
